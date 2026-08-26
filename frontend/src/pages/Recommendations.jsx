@@ -2,6 +2,7 @@ import { Sparkles } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
+import EmptyState from '../components/EmptyState';
 import { recommendations } from '../data/mockData';
 import { PRIORITY_LABELS, PRIORITY_TONES } from '../lib/status';
 
@@ -13,6 +14,9 @@ export default function Recommendations() {
         subtitle="AI-generated guidance based on recent flock activity"
       />
 
+      {recommendations.length === 0 ? (
+        <EmptyState icon={Sparkles} title="No recommendations right now" body="Guidance shows up here once activity needs your attention." />
+      ) : (
       <div className="flex flex-col gap-3">
         {recommendations.map((rec) => (
           <Card key={rec.id} className="flex items-start gap-3 px-5 py-4">
@@ -30,6 +34,7 @@ export default function Recommendations() {
           </Card>
         ))}
       </div>
+      )}
     </div>
   );
 }

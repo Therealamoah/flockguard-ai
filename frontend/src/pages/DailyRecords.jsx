@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Paperclip, TriangleAlert } from 'lucide-react';
+import { Paperclip, TriangleAlert, ClipboardList } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
+import EmptyState from '../components/EmptyState';
 import LogRecordModal from '../components/LogRecordModal';
 import VerifyActions from '../components/VerifyActions';
 import { useFarmData } from '../context/farmDataStore';
@@ -42,6 +43,13 @@ export default function DailyRecords() {
         }
       />
 
+      {dailyRecords.length === 0 ? (
+        <EmptyState
+          icon={ClipboardList}
+          title="No records logged yet"
+          body="Log today's feed, water, and mortality numbers to get started."
+        />
+      ) : (
       <div className="flex flex-col gap-3">
         {dailyRecords.map((record) => {
           const flock = flocksById[record.flockId];
@@ -115,6 +123,7 @@ export default function DailyRecords() {
           );
         })}
       </div>
+      )}
 
       {modalOpen && (
         <LogRecordModal flocks={flocks} onClose={() => setModalOpen(false)} onSubmit={handleSubmit} />

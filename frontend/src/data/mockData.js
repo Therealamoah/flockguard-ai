@@ -7,6 +7,7 @@ export const currentUser = {
   role: 'Farm Manager',
   email: 'collinsamoah594@gmail.com',
   farm: 'Colnett Poultry Farm',
+  plan: 'Pro',
 };
 
 export const flocks = [

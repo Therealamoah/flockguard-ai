@@ -1,7 +1,8 @@
-import { AlertTriangle, TriangleAlert, ShieldQuestion } from 'lucide-react';
+import { AlertTriangle, TriangleAlert, ShieldQuestion, BellOff } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
+import EmptyState from '../components/EmptyState';
 import VerifyActions from '../components/VerifyActions';
 import { useFarmData } from '../context/farmDataStore';
 import { BEHAVIOR_LABELS } from '../lib/status';
@@ -65,6 +66,9 @@ export default function Alerts() {
 
       <div>
         {pendingVerification.length > 0 && <h2 className="mb-3 text-base font-semibold text-ink">Confirmed alerts</h2>}
+        {alerts.length === 0 ? (
+          <EmptyState icon={BellOff} title="No alerts" body="You'll see confirmed alerts here as soon as something needs attention." />
+        ) : (
         <div className="flex flex-col gap-3">
           {alerts.map((alert) => {
             const Icon = alert.severity === 'critical' ? AlertTriangle : TriangleAlert;
@@ -91,6 +95,7 @@ export default function Alerts() {
             );
           })}
         </div>
+        )}
       </div>
     </div>
   );

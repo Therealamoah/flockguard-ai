@@ -6,8 +6,8 @@ import FlockOverviewItem from '../components/FlockOverviewItem';
 import FeedChart from '../components/FeedChart';
 import RiskDonut from '../components/RiskDonut';
 import { useFarmData } from '../context/farmDataStore';
+import { useAuth } from '../context/authStore';
 import {
-  currentUser,
   flocks,
   totalBirds,
   healthyCount,
@@ -22,10 +22,10 @@ const today = new Date().toLocaleDateString('en-US', {
   day: 'numeric',
 });
 
-const firstName = currentUser.name.split(' ')[0];
-
 export default function Dashboard() {
   const { alerts, pendingVerification } = useFarmData();
+  const { user } = useAuth();
+  const firstName = user.name.split(' ')[0];
   const latestAlert = alerts[0];
 
   return (
@@ -69,7 +69,7 @@ export default function Dashboard() {
 
           {pendingVerification.length > 0 && (
             <Link
-              to="/alerts"
+              to="/app/alerts"
               className="flex items-center gap-2.5 rounded-2xl border border-warning-bg bg-warning-bg/50 px-4 py-3 text-sm text-warning-ink hover:bg-warning-bg"
             >
               <ShieldQuestion size={16} className="shrink-0" />

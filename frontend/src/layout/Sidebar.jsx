@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import clsx from 'clsx';
 import {
   LayoutDashboard,
@@ -10,25 +10,33 @@ import {
   Lightbulb,
   FileText,
   Settings,
+  LogOut,
 } from 'lucide-react';
-import { currentUser } from '../data/mockData';
 import { useFarmData } from '../context/farmDataStore';
+import { useAuth } from '../context/authStore';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/flocks', label: 'My flocks', icon: Bird },
-  { to: '/daily-records', label: 'Daily records', icon: ClipboardList },
-  { to: '/health-monitoring', label: 'Health monitoring', icon: HeartPulse },
-  { to: '/alerts', label: 'Alerts', icon: Bell },
-  { to: '/analytics', label: 'Analytics', icon: BarChart3 },
-  { to: '/recommendations', label: 'Recommendations', icon: Lightbulb },
-  { to: '/reports', label: 'Reports', icon: FileText },
-  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/app/flocks', label: 'My flocks', icon: Bird },
+  { to: '/app/daily-records', label: 'Daily records', icon: ClipboardList },
+  { to: '/app/health-monitoring', label: 'Health monitoring', icon: HeartPulse },
+  { to: '/app/alerts', label: 'Alerts', icon: Bell },
+  { to: '/app/analytics', label: 'Analytics', icon: BarChart3 },
+  { to: '/app/recommendations', label: 'Recommendations', icon: Lightbulb },
+  { to: '/app/reports', label: 'Reports', icon: FileText },
+  { to: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function Sidebar() {
   const { pendingVerification } = useFarmData();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const alertsBadge = pendingVerification.length || undefined;
+
+  function handleLogout() {
+    logout();
+    navigate('/', { replace: true });
+  }
 
   return (
     <aside className="flex h-full w-[220px] shrink-0 flex-col bg-brand-950 text-white/80">
@@ -38,7 +46,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 space-y-1 px-3">
         {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => {
-          const badge = to === '/alerts' ? alertsBadge : undefined;
+          const badge = to === '/app/alerts' ? alertsBadge : undefined;
           return (
             <NavLink
               key={to}
@@ -68,11 +76,20 @@ export default function Sidebar() {
       </nav>
 
       <div className="border-t border-white/10 px-4 py-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
-            {currentUser.initials}
-          </span>
-          <span className="text-sm font-medium text-white/90">{currentUser.name}</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-semibold text-white">
+              {user.initials}
+            </span>
+            <span className="truncate text-sm font-medium text-white/90">{user.name}</span>
+          </div>
+          <button
+            onClick={handleLogout}
+            aria-label="Log out"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white/50 hover:bg-brand-900 hover:text-white"
+          >
+            <LogOut size={15} />
+          </button>
         </div>
       </div>
     </aside>

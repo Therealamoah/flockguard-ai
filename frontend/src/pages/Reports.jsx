@@ -1,6 +1,7 @@
 import { FileText, Download } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
+import EmptyState from '../components/EmptyState';
 import { reports } from '../data/mockData';
 
 export default function Reports() {
@@ -11,6 +12,9 @@ export default function Reports() {
         subtitle="Generated summaries you can share with your team or vet"
       />
 
+      {reports.length === 0 ? (
+        <EmptyState icon={FileText} title="No reports yet" body="Reports are generated automatically each week once you have daily records logged." />
+      ) : (
       <div className="flex flex-col gap-3">
         {reports.map((report) => (
           <Card key={report.id} className="flex items-center justify-between gap-4 px-5 py-4">
@@ -32,6 +36,7 @@ export default function Reports() {
           </Card>
         ))}
       </div>
+      )}
     </div>
   );
 }

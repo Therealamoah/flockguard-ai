@@ -1,6 +1,8 @@
+import { Bird } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
+import EmptyState from '../components/EmptyState';
 import { flocks } from '../data/mockData';
 import { RISK_LABELS, RISK_TONES, STATUS_LABELS, STATUS_TONES } from '../lib/status';
 
@@ -9,6 +11,9 @@ export default function Flocks() {
     <div className="flex flex-col gap-6">
       <PageHeader title="My flocks" subtitle={`${flocks.length} flocks across your farm`} />
 
+      {flocks.length === 0 ? (
+        <EmptyState icon={Bird} title="No flocks yet" body="Add your first flock to start logging daily records." />
+      ) : (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {flocks.map((flock) => (
           <Card key={flock.id} className="flex flex-col gap-3 px-5 py-4">
@@ -47,6 +52,7 @@ export default function Flocks() {
           </Card>
         ))}
       </div>
+      )}
     </div>
   );
 }
