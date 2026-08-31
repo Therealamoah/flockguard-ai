@@ -177,14 +177,19 @@ export function FarmDataProvider({ children }) {
   const healthMetrics = useMemo(() => deriveHealthMetrics(flocksDisplay, dailyRecords), [flocksDisplay, dailyRecords]);
 
   async function addDailyRecord(input) {
+    // Pro/Enterprise: real AI classification, run server-side (the Gemini
+    // key can't live in the browser) and saved in the same request.
+    if (currentPlan.capabilities.fullDetection) {
+      const row = await backendApi.post('/api/ai/classify-and-save-record', input);
+      const record = mapDailyRecordRow(row);
+      setDailyRecords((prev) => [record, ...prev]);
+      return record;
+    }
+
+    // Free: the cheap client-side mortality-only check, no AI call.
     const flock = flocksById[input.flockId];
     const priorRecords = dailyRecords.filter((r) => r.flockId === input.flockId);
-    const { flagged, reasons } = detectAnomaly({
-      record: input,
-      flock,
-      priorRecords,
-      fullDetection: currentPlan.capabilities.fullDetection,
-    });
+    const { flagged, reasons } = detectAnomaly({ record: input, flock, priorRecords, fullDetection: false });
 
     const { data, error } = await supabase
       .from('daily_records')
@@ -254,6 +259,15 @@ export function FarmDataProvider({ children }) {
       // Best-effort, same reasoning -- the alert already exists regardless
       // of whether the email send succeeds.
       backendApi.post('/api/notifications/critical-alert', { flockName, message }).catch(() => {});
+
+      // Fills in the "Guide" step. Best-effort -- a failed generation
+      // shouldn't undo the alert that already exists.
+      if (currentPlan.capabilities.recommendations) {
+        backendApi
+          .post('/api/ai/generate-recommendation', { flockId: record.flockId, flockName, message })
+          .then((row) => setRecommendations((prev) => [mapRecommendationRow(row), ...prev]))
+          .catch(() => {});
+      }
     }
   }
 
