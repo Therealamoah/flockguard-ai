@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { X, Paperclip } from 'lucide-react';
+import { X, Paperclip, Lock } from 'lucide-react';
 import { BEHAVIOR_OPTIONS } from '../lib/status';
+import { uploadEvidence } from '../lib/cloudinary';
+import { useFarmData } from '../context/farmDataStore';
 
 const emptyForm = {
   flockId: '',
@@ -28,20 +30,35 @@ const inputClass =
   'rounded-lg border border-border bg-card px-3 py-2 text-sm text-ink outline-none focus:border-brand-500';
 
 export default function LogRecordModal({ flocks, onClose, onSubmit }) {
+  const { currentPlan } = useFarmData();
   const [form, setForm] = useState(emptyForm);
   const [evidence, setEvidence] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [uploadError, setUploadError] = useState('');
 
   const flock = flocks.find((f) => f.id === form.flockId);
   const isLayer = flock?.type === 'Layers';
+  const uploading = uploadProgress !== null;
 
   function update(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleFile(e) {
+  async function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setEvidence({ type: file.type.startsWith('video') ? 'video' : 'photo', name: file.name });
+
+    setUploadError('');
+    setEvidence(null);
+    setUploadProgress(0);
+    try {
+      const uploaded = await uploadEvidence(file, setUploadProgress);
+      setEvidence(uploaded);
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploadProgress(null);
+    }
   }
 
   function handleSubmit(e) {
@@ -192,11 +209,27 @@ export default function LogRecordModal({ flocks, onClose, onSubmit }) {
           </Field>
 
           <Field label="Photo or video evidence (optional)">
-            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-ink-soft hover:border-brand-500">
-              <Paperclip size={15} />
-              {evidence ? evidence.name : 'Attach a file'}
-              <input type="file" accept="image/*,video/*" className="hidden" onChange={handleFile} />
-            </label>
+            {currentPlan.capabilities.evidenceUpload ? (
+              <>
+                <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-ink-soft hover:border-brand-500">
+                  <Paperclip size={15} />
+                  {uploading ? `Uploading… ${uploadProgress}%` : evidence ? evidence.name : 'Attach a file'}
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    onChange={handleFile}
+                    disabled={uploading}
+                  />
+                </label>
+                {uploadError && <span className="text-xs text-critical-ink">{uploadError}</span>}
+              </>
+            ) : (
+              <div className="flex items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2 text-sm text-ink-muted">
+                <Lock size={14} />
+                Evidence uploads need the Pro plan
+              </div>
+            )}
           </Field>
 
           <div className="mt-2 flex justify-end gap-2">
@@ -209,7 +242,8 @@ export default function LogRecordModal({ flocks, onClose, onSubmit }) {
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+              disabled={uploading}
+              className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"
             >
               Save record
             </button>

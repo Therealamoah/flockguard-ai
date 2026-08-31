@@ -6,6 +6,14 @@ export const PLAN_TIERS = [
     tagline: 'Try FlockGuard on a couple of flocks',
     flockLimit: 2,
     teamLimit: 1,
+    historyDays: 7,
+    capabilities: {
+      fullDetection: false, // critical mortality spikes only -- no feed/temp/humidity/behavior flags
+      recommendations: false,
+      analytics: false,
+      reports: false,
+      evidenceUpload: false,
+    },
     highlight: false,
     features: [
       'Up to 2 flocks',
@@ -22,6 +30,14 @@ export const PLAN_TIERS = [
     tagline: 'For farms actively managing risk',
     flockLimit: 20,
     teamLimit: 5,
+    historyDays: 365,
+    capabilities: {
+      fullDetection: true,
+      recommendations: true,
+      analytics: true,
+      reports: true,
+      evidenceUpload: true,
+    },
     highlight: true,
     features: [
       'Up to 20 flocks',
@@ -41,6 +57,14 @@ export const PLAN_TIERS = [
     tagline: 'For multi-house or multi-farm operations',
     flockLimit: Infinity,
     teamLimit: Infinity,
+    historyDays: Infinity,
+    capabilities: {
+      fullDetection: true,
+      recommendations: true,
+      analytics: true,
+      reports: true,
+      evidenceUpload: true,
+    },
     highlight: false,
     features: [
       'Unlimited flocks',
@@ -52,3 +76,7 @@ export const PLAN_TIERS = [
     ],
   },
 ];
+
+export function planFor(planId) {
+  return PLAN_TIERS.find((p) => p.id === planId) ?? PLAN_TIERS[0];
+}

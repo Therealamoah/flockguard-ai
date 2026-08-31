@@ -1,6 +1,6 @@
 import { supabaseAdminAuth } from './supabaseAdminClient';
 
-const API_BASE = import.meta.env.VITE_ADMIN_API_URL || 'http://localhost:4000';
+const API_BASE = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:4000';
 
 async function authHeader() {
   const {

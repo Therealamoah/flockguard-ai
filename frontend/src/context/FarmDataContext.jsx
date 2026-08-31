@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabaseClient';
 import { useAuth } from './authStore';
 import { detectAnomaly } from '../lib/anomalyRules';
 import { BEHAVIOR_LABELS } from '../lib/status';
+import { planFor } from '../data/plans';
+import { backendApi } from '../lib/backendApi';
 import {
   deriveFlock,
   deriveFeedConsumption7d,
@@ -39,7 +41,7 @@ function mapDailyRecordRow(row) {
     humidity: row.humidity != null ? Number(row.humidity) : null,
     behavior: row.behavior,
     notes: row.notes,
-    evidence: row.evidence_url ? { name: row.evidence_url } : null,
+    evidence: row.evidence_url ? { url: row.evidence_url } : null,
     flagged: row.flagged,
     verified: row.verified,
     reasons: row.reasons ?? [],
@@ -88,12 +90,14 @@ function mapReportRow(row) {
 export function FarmDataProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
   const farmId = user?.farmId;
+  const currentPlan = planFor(user?.plan);
 
   const [flocks, setFlocks] = useState([]);
   const [dailyRecords, setDailyRecords] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [reports, setReports] = useState([]);
+  const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -107,14 +111,27 @@ export function FarmDataProvider({ children }) {
         setAlerts([]);
         setRecommendations([]);
         setReports([]);
+        setTeam([]);
         setLoading(false);
         return;
       }
 
       setLoading(true);
-      const [flocksRes, recordsRes, alertsRes, recsRes, reportsRes] = await Promise.all([
+
+      let recordsQuery = supabase
+        .from('daily_records')
+        .select('*')
+        .eq('farm_id', farmId)
+        .order('record_date', { ascending: false });
+      if (Number.isFinite(currentPlan.historyDays)) {
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - currentPlan.historyDays);
+        recordsQuery = recordsQuery.gte('record_date', cutoff.toISOString().slice(0, 10));
+      }
+
+      const [flocksRes, recordsRes, alertsRes, recsRes, reportsRes, teamRes] = await Promise.all([
         supabase.from('flocks').select('*').eq('farm_id', farmId),
-        supabase.from('daily_records').select('*').eq('farm_id', farmId).order('record_date', { ascending: false }),
+        recordsQuery,
         supabase
           .from('alerts')
           .select('*, flocks(name, type, house)')
@@ -126,6 +143,7 @@ export function FarmDataProvider({ children }) {
           .eq('farm_id', farmId)
           .order('created_at', { ascending: false }),
         supabase.from('reports').select('*').eq('farm_id', farmId).order('generated_at', { ascending: false }),
+        supabase.from('profiles').select('id, name, role, status').eq('farm_id', farmId).order('created_at', { ascending: true }),
       ]);
 
       if (cancelled) return;
@@ -135,6 +153,7 @@ export function FarmDataProvider({ children }) {
       setAlerts((alertsRes.data ?? []).map(mapAlertRow));
       setRecommendations((recsRes.data ?? []).map(mapRecommendationRow));
       setReports((reportsRes.data ?? []).map(mapReportRow));
+      setTeam(teamRes.data ?? []);
       setLoading(false);
     }
 
@@ -142,7 +161,10 @@ export function FarmDataProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, farmId]);
+    // currentPlan.historyDays is included so upgrading/downgrading plan
+    // immediately re-fetches with the new history window, not just on next
+    // page load.
+  }, [isAuthenticated, farmId, currentPlan.historyDays]);
 
   const flocksDisplay = useMemo(() => flocks.map((f) => deriveFlock(f, dailyRecords)), [flocks, dailyRecords]);
   const flocksById = useMemo(() => Object.fromEntries(flocksDisplay.map((f) => [f.id, f])), [flocksDisplay]);
@@ -157,7 +179,12 @@ export function FarmDataProvider({ children }) {
   async function addDailyRecord(input) {
     const flock = flocksById[input.flockId];
     const priorRecords = dailyRecords.filter((r) => r.flockId === input.flockId);
-    const { flagged, reasons } = detectAnomaly({ record: input, flock, priorRecords });
+    const { flagged, reasons } = detectAnomaly({
+      record: input,
+      flock,
+      priorRecords,
+      fullDetection: currentPlan.capabilities.fullDetection,
+    });
 
     const { data, error } = await supabase
       .from('daily_records')
@@ -173,7 +200,7 @@ export function FarmDataProvider({ children }) {
         humidity: input.humidity,
         behavior: input.behavior,
         notes: input.notes,
-        evidence_url: input.evidence?.name ?? null,
+        evidence_url: input.evidence?.url ?? null,
         flagged,
         verified: flagged ? 'pending' : null,
         reasons,
@@ -214,10 +241,27 @@ export function FarmDataProvider({ children }) {
 
       if (alertError) throw alertError;
       setAlerts((prev) => [mapAlertRow(data), ...prev]);
+
+      // Best-effort -- the alert already exists, a logging hiccup here
+      // shouldn't undo that.
+      const flockName = data.flocks ? `${data.flocks.name} — ${data.flocks.house}` : '';
+      supabase.from('activity_log').insert({
+        farm_id: farmId,
+        type: 'alert',
+        text: `Alert escalated${flockName ? ` — ${flockName}` : ''}: ${message}`,
+      });
+
+      // Best-effort, same reasoning -- the alert already exists regardless
+      // of whether the email send succeeds.
+      backendApi.post('/api/notifications/critical-alert', { flockName, message }).catch(() => {});
     }
   }
 
   async function addFlock(input) {
+    if (flocks.length >= currentPlan.flockLimit) {
+      throw new Error(`Your ${currentPlan.name} plan allows up to ${currentPlan.flockLimit} flocks — upgrade to add more.`);
+    }
+
     const { data, error } = await supabase
       .from('flocks')
       .insert({
@@ -242,12 +286,14 @@ export function FarmDataProvider({ children }) {
   const pendingVerification = dailyRecords.filter((r) => r.flagged && r.verified === 'pending');
 
   const value = {
+    currentPlan,
     flocks: flocksDisplay,
     flocksById,
     dailyRecords,
     alerts,
     recommendations,
     reports,
+    team,
     pendingVerification,
     totalBirds,
     healthyCount,

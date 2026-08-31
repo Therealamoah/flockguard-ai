@@ -2,7 +2,12 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import adminRouter from './routes/admin.js';
+import paymentsRouter from './routes/payments.js';
+import uploadsRouter from './routes/uploads.js';
+import teamRouter from './routes/team.js';
+import notificationsRouter from './routes/notifications.js';
 import { requireAdminAuth } from './middleware/requireAdminAuth.js';
+import { startScheduler } from './lib/scheduler.js';
 
 const app = express();
 
@@ -12,6 +17,10 @@ app.use(express.json());
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/admin', requireAdminAuth, adminRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/uploads', uploadsRouter);
+app.use('/api/team', teamRouter);
+app.use('/api/notifications', notificationsRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);
@@ -21,4 +30,5 @@ app.use((err, req, res, next) => {
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`FlockGuard backend listening on http://localhost:${port}`);
+  startScheduler();
 });

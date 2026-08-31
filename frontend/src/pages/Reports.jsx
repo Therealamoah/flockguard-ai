@@ -2,10 +2,11 @@ import { FileText, Download } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
+import UpgradePrompt from '../components/UpgradePrompt';
 import { useFarmData } from '../context/farmDataStore';
 
 export default function Reports() {
-  const { reports } = useFarmData();
+  const { reports, currentPlan } = useFarmData();
 
   return (
     <div className="flex flex-col gap-6">
@@ -14,7 +15,9 @@ export default function Reports() {
         subtitle="Generated summaries you can share with your team or vet"
       />
 
-      {reports.length === 0 ? (
+      {!currentPlan.capabilities.reports ? (
+        <UpgradePrompt feature="Reports" />
+      ) : reports.length === 0 ? (
         <EmptyState icon={FileText} title="No reports yet" body="Reports are generated automatically each week once you have daily records logged." />
       ) : (
       <div className="flex flex-col gap-3">

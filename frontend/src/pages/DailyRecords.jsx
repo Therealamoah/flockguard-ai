@@ -112,10 +112,15 @@ export default function DailyRecords() {
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
                 <span className="rounded-full bg-surface px-2 py-1">{BEHAVIOR_LABELS[record.behavior]}</span>
                 {record.evidence && (
-                  <span className="flex items-center gap-1 rounded-full bg-surface px-2 py-1">
+                  <a
+                    href={record.evidence.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 rounded-full bg-surface px-2 py-1 hover:bg-mint-100 hover:text-brand-500"
+                  >
                     <Paperclip size={11} />
-                    {record.evidence.name}
-                  </span>
+                    View evidence
+                  </a>
                 )}
               </div>
 

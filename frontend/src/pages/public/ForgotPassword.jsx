@@ -2,13 +2,24 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MailCheck } from 'lucide-react';
 import FormField, { inputClass } from '../../components/FormField';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    // Always show the same "check your email" message whether or not the
+    // account exists -- never let this form reveal which emails are
+    // registered.
+    try {
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+    } catch {
+      // intentionally swallowed, see note above
+    }
     setSent(true);
   }
 

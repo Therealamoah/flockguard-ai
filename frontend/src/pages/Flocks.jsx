@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Bird, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bird, Plus, Lock } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
@@ -9,8 +10,9 @@ import { useFarmData } from '../context/farmDataStore';
 import { RISK_LABELS, RISK_TONES, STATUS_LABELS, STATUS_TONES } from '../lib/status';
 
 export default function Flocks() {
-  const { flocks, addFlock } = useFarmData();
+  const { flocks, addFlock, currentPlan } = useFarmData();
   const [modalOpen, setModalOpen] = useState(false);
+  const atLimit = flocks.length >= currentPlan.flockLimit;
 
   async function handleSubmit(input) {
     try {
@@ -21,20 +23,30 @@ export default function Flocks() {
     }
   }
 
+  const addButton = atLimit ? (
+    <Link
+      to="/app/settings"
+      className="flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-ink-soft hover:bg-surface"
+    >
+      <Lock size={14} />
+      Upgrade to add more
+    </Link>
+  ) : (
+    <button
+      onClick={() => setModalOpen(true)}
+      className="flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+    >
+      <Plus size={15} />
+      Add flock
+    </button>
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
         title="My flocks"
-        subtitle={`${flocks.length} flocks across your farm`}
-        actions={
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
-          >
-            <Plus size={15} />
-            Add flock
-          </button>
-        }
+        subtitle={`${flocks.length} of ${currentPlan.flockLimit === Infinity ? 'unlimited' : currentPlan.flockLimit} flocks used on the ${currentPlan.name} plan`}
+        actions={addButton}
       />
 
       {flocks.length === 0 ? (

@@ -1,9 +1,8 @@
 import { Router } from 'express';
 import { supabaseAdmin } from '../supabaseAdmin.js';
+import { PLAN_PRICE } from '../planPrices.js';
 
 const router = Router();
-
-const PLAN_PRICE = { free: 0, pro: 49, enterprise: 199 };
 
 // profiles/farms don't store email -- that lives in Supabase Auth -- so any
 // route that needs to show a person's email or "last login" merges it in

@@ -3,11 +3,12 @@ import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
+import UpgradePrompt from '../components/UpgradePrompt';
 import { useFarmData } from '../context/farmDataStore';
 import { PRIORITY_LABELS, PRIORITY_TONES } from '../lib/status';
 
 export default function Recommendations() {
-  const { recommendations } = useFarmData();
+  const { recommendations, currentPlan } = useFarmData();
 
   return (
     <div className="flex flex-col gap-6">
@@ -16,7 +17,9 @@ export default function Recommendations() {
         subtitle="AI-generated guidance based on recent flock activity"
       />
 
-      {recommendations.length === 0 ? (
+      {!currentPlan.capabilities.recommendations ? (
+        <UpgradePrompt feature="Recommendations" />
+      ) : recommendations.length === 0 ? (
         <EmptyState icon={Sparkles} title="No recommendations right now" body="Guidance shows up here once activity needs your attention." />
       ) : (
       <div className="flex flex-col gap-3">

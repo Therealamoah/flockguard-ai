@@ -3,11 +3,21 @@ import Card from '../components/Card';
 import FeedChart from '../components/FeedChart';
 import RiskDonut from '../components/RiskDonut';
 import MortalityBarChart from '../components/MortalityBarChart';
+import UpgradePrompt from '../components/UpgradePrompt';
 import { useFarmData } from '../context/farmDataStore';
 
 export default function Analytics() {
-  const { flocks, feedConsumption7d, riskDistribution } = useFarmData();
+  const { flocks, feedConsumption7d, riskDistribution, currentPlan } = useFarmData();
   const mortalityByFlock = flocks.map((f) => ({ name: f.name, value: f.mortalityRate }));
+
+  if (!currentPlan.capabilities.analytics) {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Analytics" subtitle="Trends across your farm over the last 7 days" />
+        <UpgradePrompt feature="Analytics" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

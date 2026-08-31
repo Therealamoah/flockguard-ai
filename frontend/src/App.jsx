@@ -13,6 +13,8 @@ import Home from './pages/public/Home';
 import Login from './pages/public/Login';
 import Register from './pages/public/Register';
 import ForgotPassword from './pages/public/ForgotPassword';
+import ResetPassword from './pages/public/ResetPassword';
+import AcceptInvite from './pages/public/AcceptInvite';
 import NotFound from './pages/NotFound';
 import Dashboard from './pages/Dashboard';
 import Flocks from './pages/Flocks';
@@ -45,6 +47,13 @@ function App() {
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
               </Route>
+            </Route>
+
+            {/* Not GuestOnly-gated: reached via an emailed link regardless of
+                whatever auth state the browser happens to already be in. */}
+            <Route element={<AuthLayout />}>
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/accept-invite" element={<AcceptInvite />} />
             </Route>
 
             <Route element={<RequireAuth />}>
