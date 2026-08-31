@@ -20,6 +20,14 @@ const SEVERITY_LABEL = {
 export default function Alerts() {
   const { alerts, pendingVerification, flocksById, verifyRecord } = useFarmData();
 
+  async function handleVerify(recordId, decision) {
+    try {
+      await verifyRecord(recordId, decision);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
@@ -48,8 +56,8 @@ export default function Alerts() {
                       </div>
                     </div>
                     <VerifyActions
-                      onConfirm={() => verifyRecord(record.id, 'confirmed')}
-                      onDismiss={() => verifyRecord(record.id, 'dismissed')}
+                      onConfirm={() => handleVerify(record.id, 'confirmed')}
+                      onDismiss={() => handleVerify(record.id, 'dismissed')}
                     />
                   </div>
                   <ul className="mt-2 list-disc space-y-0.5 pl-4 text-sm text-warning-ink">

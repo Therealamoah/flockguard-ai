@@ -1,10 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Ban, PlayCircle } from 'lucide-react';
 import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
 import Badge from '../../components/Badge';
 import EmptyState from '../../components/EmptyState';
-import { farms, platformUsers, activityLog } from '../../data/adminMockData';
+import { adminApi } from '../../lib/adminApi';
 
 const STATUS_TONE = { active: 'good', trial: 'warning', suspended: 'critical' };
 const STATUS_LABEL = { active: 'Active', trial: 'Trial', suspended: 'Suspended' };
@@ -20,33 +21,40 @@ function Metric({ label, value }) {
 
 export default function FarmDetail() {
   const { farmId } = useParams();
-  const farm = farms.find((f) => f.id === farmId);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
 
-  if (!farm) {
+  useEffect(() => {
+    adminApi.get(`/farms/${farmId}`).then(setData).catch((err) => setError(err.message));
+  }, [farmId]);
+
+  const backLink = (
+    <Link to="/admin/farms" className="flex w-fit items-center gap-1.5 text-sm font-medium text-ink-soft hover:text-ink">
+      <ArrowLeft size={14} />
+      Back to farms
+    </Link>
+  );
+
+  if (error) {
     return (
       <div className="flex flex-col gap-6">
-        <Link to="/admin/farms" className="flex w-fit items-center gap-1.5 text-sm font-medium text-ink-soft hover:text-ink">
-          <ArrowLeft size={14} />
-          Back to farms
-        </Link>
+        {backLink}
         <EmptyState title="Farm not found" body="This farm may have been removed." />
       </div>
     );
   }
 
-  const users = platformUsers.filter((u) => u.farmId === farmId);
-  const events = activityLog.filter((e) => e.farmId === farmId);
+  if (!data) return <p className="text-sm text-ink-soft">Loading…</p>;
+
+  const { farm, users, activity } = data;
 
   return (
     <div className="flex flex-col gap-6">
-      <Link to="/admin/farms" className="flex w-fit items-center gap-1.5 text-sm font-medium text-ink-soft hover:text-ink">
-        <ArrowLeft size={14} />
-        Back to farms
-      </Link>
+      {backLink}
 
       <PageHeader
         title={farm.name}
-        subtitle={`Owned by ${farm.owner} · ${farm.email}`}
+        subtitle={`Owned by ${farm.owner || 'unknown'}${farm.email ? ` · ${farm.email}` : ''}`}
         actions={
           farm.status === 'suspended' ? (
             <button className="flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600">
@@ -65,14 +73,13 @@ export default function FarmDetail() {
       <Card className="flex flex-wrap items-center justify-between gap-4 px-6 py-5">
         <div className="flex items-center gap-3">
           <Badge tone={STATUS_TONE[farm.status]}>{STATUS_LABEL[farm.status]}</Badge>
-          <span className="text-sm text-ink-soft">{farm.plan} plan</span>
+          <span className="text-sm text-ink-soft capitalize">{farm.plan} plan</span>
         </div>
         <div className="flex gap-8">
           <Metric label="Flocks" value={farm.flockCount} />
           <Metric label="Birds" value={farm.birdCount.toLocaleString()} />
           <Metric label="Users" value={farm.userCount} />
           <Metric label="Signed up" value={farm.signupDate} />
-          <Metric label="Last active" value={farm.lastActive} />
         </div>
       </Card>
 
@@ -89,7 +96,9 @@ export default function FarmDetail() {
                   </div>
                   <div className="text-right">
                     <Badge tone="neutral">{u.role}</Badge>
-                    <div className="mt-1 text-xs text-ink-muted">Last login {u.lastLogin}</div>
+                    <div className="mt-1 text-xs text-ink-muted">
+                      {u.lastLogin ? `Last login ${u.lastLogin.slice(0, 10)}` : 'Never signed in'}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -100,13 +109,13 @@ export default function FarmDetail() {
         <div>
           <h2 className="mb-3 text-base font-semibold text-ink">Recent activity</h2>
           <Card className="overflow-hidden">
-            {events.length === 0 ? (
+            {activity.length === 0 ? (
               <div className="px-5 py-8">
                 <EmptyState title="No recent activity" body="Nothing logged for this farm yet." />
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {events.map((e) => (
+                {activity.map((e) => (
                   <div key={e.id} className="px-5 py-3">
                     <p className="text-sm text-ink-soft">{e.text}</p>
                     <p className="mt-0.5 text-xs text-ink-muted">{e.time}</p>
@@ -118,7 +127,7 @@ export default function FarmDetail() {
         </div>
       </div>
 
-      <p className="text-xs text-ink-muted">Read-only view — for support use only. Changes made here are not persisted yet.</p>
+      <p className="text-xs text-ink-muted">Read-only view — for support use only.</p>
     </div>
   );
 }

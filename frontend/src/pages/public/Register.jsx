@@ -19,15 +19,19 @@ export default function Register() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     if (form.password !== form.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
     setError('');
-    register(form);
-    navigate('/app', { replace: true });
+    try {
+      await register(form);
+      navigate('/app', { replace: true });
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (

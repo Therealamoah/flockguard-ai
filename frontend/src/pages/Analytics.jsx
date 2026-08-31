@@ -3,11 +3,12 @@ import Card from '../components/Card';
 import FeedChart from '../components/FeedChart';
 import RiskDonut from '../components/RiskDonut';
 import MortalityBarChart from '../components/MortalityBarChart';
-import { feedConsumption7d, riskDistribution, flocks } from '../data/mockData';
-
-const mortalityByFlock = flocks.map((f) => ({ name: f.name, value: f.mortalityRate }));
+import { useFarmData } from '../context/farmDataStore';
 
 export default function Analytics() {
+  const { flocks, feedConsumption7d, riskDistribution } = useFarmData();
+  const mortalityByFlock = flocks.map((f) => ({ name: f.name, value: f.mortalityRate }));
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Analytics" subtitle="Trends across your farm over the last 7 days" />

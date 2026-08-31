@@ -7,14 +7,6 @@ import FeedChart from '../components/FeedChart';
 import RiskDonut from '../components/RiskDonut';
 import { useFarmData } from '../context/farmDataStore';
 import { useAuth } from '../context/authStore';
-import {
-  flocks,
-  totalBirds,
-  healthyCount,
-  attentionCount,
-  feedConsumption7d,
-  riskDistribution,
-} from '../data/mockData';
 
 const today = new Date().toLocaleDateString('en-US', {
   weekday: 'long',
@@ -23,7 +15,16 @@ const today = new Date().toLocaleDateString('en-US', {
 });
 
 export default function Dashboard() {
-  const { alerts, pendingVerification } = useFarmData();
+  const {
+    flocks,
+    totalBirds,
+    healthyCount,
+    attentionCount,
+    feedConsumption7d,
+    riskDistribution,
+    alerts,
+    pendingVerification,
+  } = useFarmData();
   const { user } = useAuth();
   const firstName = user.name.split(' ')[0];
   const latestAlert = alerts[0];
@@ -50,22 +51,28 @@ export default function Dashboard() {
         <div className="flex flex-col gap-6">
           <div>
             <h2 className="mb-3 text-base font-semibold text-ink">Flock health overview</h2>
-            <div className="flex flex-col gap-3">
-              {flocks.slice(0, 2).map((flock) => (
-                <FlockOverviewItem key={flock.id} flock={flock} />
-              ))}
-            </div>
+            {flocks.length === 0 ? (
+              <p className="text-sm text-ink-soft">No flocks yet — add one to start tracking.</p>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {flocks.slice(0, 2).map((flock) => (
+                  <FlockOverviewItem key={flock.id} flock={flock} />
+                ))}
+              </div>
+            )}
           </div>
 
-          <div>
-            <h2 className="mb-3 text-base font-semibold text-ink">Recent alerts</h2>
-            <Card className="border-critical-bg bg-critical-bg px-4 py-3.5">
-              <p className="text-sm text-critical-ink">
-                <span className="font-medium">{latestAlert.flockName}</span> — {latestAlert.message} ·{' '}
-                {latestAlert.time}
-              </p>
-            </Card>
-          </div>
+          {latestAlert && (
+            <div>
+              <h2 className="mb-3 text-base font-semibold text-ink">Recent alerts</h2>
+              <Card className="border-critical-bg bg-critical-bg px-4 py-3.5">
+                <p className="text-sm text-critical-ink">
+                  <span className="font-medium">{latestAlert.flockName}</span> — {latestAlert.message} ·{' '}
+                  {latestAlert.time}
+                </p>
+              </Card>
+            </div>
+          )}
 
           {pendingVerification.length > 0 && (
             <Link

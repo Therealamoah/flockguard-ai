@@ -3,10 +3,12 @@ import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
-import { recommendations } from '../data/mockData';
+import { useFarmData } from '../context/farmDataStore';
 import { PRIORITY_LABELS, PRIORITY_TONES } from '../lib/status';
 
 export default function Recommendations() {
+  const { recommendations } = useFarmData();
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader

@@ -10,11 +10,16 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    login({ email });
+  async function handleSubmit(e) {
+  e.preventDefault();
+  try {
+    await login({ email, password });
     navigate(location.state?.from?.pathname ?? '/app', { replace: true });
+  } catch (err) {
+    alert(err.message);
   }
+}
+
 
   return (
     <>

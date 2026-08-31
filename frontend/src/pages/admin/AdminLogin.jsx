@@ -9,11 +9,17 @@ export default function AdminLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    adminLogin();
-    navigate('/admin', { replace: true });
+    setError('');
+    try {
+      await adminLogin({ email, password });
+      navigate('/admin', { replace: true });
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   return (
@@ -48,6 +54,8 @@ export default function AdminLogin() {
               placeholder="••••••••"
             />
           </FormField>
+
+          {error && <p className="text-xs font-medium text-critical-ink">{error}</p>}
 
           <button
             type="submit"

@@ -2,9 +2,11 @@ import { FileText, Download } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
-import { reports } from '../data/mockData';
+import { useFarmData } from '../context/farmDataStore';
 
 export default function Reports() {
+  const { reports } = useFarmData();
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader

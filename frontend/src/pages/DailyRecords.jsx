@@ -23,9 +23,21 @@ export default function DailyRecords() {
   const { dailyRecords, flocksById, addDailyRecord, verifyRecord, flocks } = useFarmData();
   const [modalOpen, setModalOpen] = useState(false);
 
-  function handleSubmit(input) {
-    addDailyRecord(input);
-    setModalOpen(false);
+  async function handleSubmit(input) {
+    try {
+      await addDailyRecord(input);
+      setModalOpen(false);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  async function handleVerify(recordId, decision) {
+    try {
+      await verifyRecord(recordId, decision);
+    } catch (err) {
+      alert(err.message);
+    }
   }
 
   return (
@@ -78,8 +90,8 @@ export default function DailyRecords() {
                 </div>
                 {record.flagged && record.verified === 'pending' && (
                   <VerifyActions
-                    onConfirm={() => verifyRecord(record.id, 'confirmed')}
-                    onDismiss={() => verifyRecord(record.id, 'dismissed')}
+                    onConfirm={() => handleVerify(record.id, 'confirmed')}
+                    onDismiss={() => handleVerify(record.id, 'dismissed')}
                   />
                 )}
               </div>

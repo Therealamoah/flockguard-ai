@@ -1,19 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PageHeader from '../../components/PageHeader';
 import Card from '../../components/Card';
 import Badge from '../../components/Badge';
-import { platformUsers, farms } from '../../data/adminMockData';
-
-const farmNameById = Object.fromEntries(farms.map((f) => [f.id, f.name]));
+import { adminApi } from '../../lib/adminApi';
 
 export default function Users() {
-  const [users, setUsers] = useState(platformUsers);
+  const [users, setUsers] = useState(null);
+  const [error, setError] = useState('');
 
-  function toggleStatus(id) {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === id ? { ...u, status: u.status === 'active' ? 'suspended' : 'active' } : u))
-    );
+  useEffect(() => {
+    adminApi.get('/users').then(setUsers).catch((err) => setError(err.message));
+  }, []);
+
+  async function toggleStatus(user) {
+    const nextStatus = user.status === 'active' ? 'suspended' : 'active';
+    try {
+      await adminApi.patch(`/users/${user.id}`, { status: nextStatus });
+      setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, status: nextStatus } : u)));
+    } catch (err) {
+      alert(err.message);
+    }
   }
+
+  if (error) return <p className="text-sm text-critical-ink">{error}</p>;
+  if (!users) return <p className="text-sm text-ink-soft">Loading…</p>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -39,19 +49,16 @@ export default function Users() {
                     <div className="font-medium text-ink">{u.name}</div>
                     <div className="text-xs text-ink-muted">{u.email}</div>
                   </td>
-                  <td className="px-5 py-3 text-ink-soft">{farmNameById[u.farmId]}</td>
-                  <td className="px-5 py-3 text-ink-soft">{u.role}</td>
-                  <td className="px-5 py-3 text-ink-soft">{u.lastLogin}</td>
+                  <td className="px-5 py-3 text-ink-soft">{u.farmName}</td>
+                  <td className="px-5 py-3 text-ink-soft capitalize">{u.role}</td>
+                  <td className="px-5 py-3 text-ink-soft">{u.lastLogin ? u.lastLogin.slice(0, 10) : 'Never'}</td>
                   <td className="px-5 py-3">
                     <Badge tone={u.status === 'active' ? 'good' : 'critical'}>
                       {u.status === 'active' ? 'Active' : 'Suspended'}
                     </Badge>
                   </td>
                   <td className="px-5 py-3 text-right">
-                    <button
-                      onClick={() => toggleStatus(u.id)}
-                      className="text-sm font-medium text-brand-500 hover:underline"
-                    >
+                    <button onClick={() => toggleStatus(u)} className="text-sm font-medium text-brand-500 hover:underline">
                       {u.status === 'active' ? 'Suspend' : 'Reactivate'}
                     </button>
                   </td>
