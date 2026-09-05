@@ -40,10 +40,16 @@ export const PRIORITY_TONES = {
 
 export const BEHAVIOR_OPTIONS = [
   { value: 'normal', label: 'Normal activity' },
-  { value: 'lethargic', label: 'Lethargic / low activity' },
-  { value: 'reduced_feeding', label: 'Reduced feeding' },
-  { value: 'aggressive', label: 'Aggressive / distressed' },
-  { value: 'respiratory', label: 'Coughing / respiratory signs' },
+  { value: 'lethargic', label: 'Lethargic / reduced activity' },
+  { value: 'reduced_appetite', label: 'Reduced appetite / off feed' },
+  { value: 'huddling', label: 'Huddling / ruffled feathers' },
+  { value: 'respiratory', label: 'Coughing, sneezing, or labored breathing' },
+  { value: 'diarrhea', label: 'Diarrhea / abnormal droppings' },
+  { value: 'lameness', label: 'Lameness / leg weakness' },
+  { value: 'pecking', label: 'Aggressive pecking / cannibalism' },
+  { value: 'panting', label: 'Panting / heat stress' },
+  { value: 'swelling', label: 'Swollen head, eyes, or nasal discharge' },
+  { value: 'egg_drop', label: 'Sudden drop in egg production' },
   { value: 'other', label: 'Other (see notes)' },
 ];
 

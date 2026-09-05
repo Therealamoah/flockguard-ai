@@ -15,17 +15,32 @@ router.post('/classify-and-save-record', requireFarmerAuth, async (req, res) => 
     const input = req.body;
     if (!input.flockId) return res.status(400).json({ error: 'flockId is required' });
 
-    const [{ data: flock, error: flockErr }, { data: priorRows, error: priorErr }] = await Promise.all([
-      supabaseAdmin.from('flocks').select('*').eq('id', input.flockId).eq('farm_id', req.farmId).single(),
-      supabaseAdmin
-        .from('daily_records')
-        .select('record_date, feed_kg, water_l, mortality')
-        .eq('flock_id', input.flockId)
-        .order('record_date', { ascending: false })
-        .limit(5),
-    ]);
+    const today = new Date().toISOString().slice(0, 10);
+
+    const [{ data: flock, error: flockErr }, { data: priorRows, error: priorErr }, { data: morningRow, error: morningErr }] =
+      await Promise.all([
+        supabaseAdmin.from('flocks').select('*').eq('id', input.flockId).eq('farm_id', req.farmId).single(),
+        supabaseAdmin
+          .from('daily_records')
+          .select('record_date, feed_kg, water_l, mortality')
+          .eq('flock_id', input.flockId)
+          .eq('period', 'evening')
+          .order('record_date', { ascending: false })
+          .limit(5),
+        // This same flock's morning check-in for today, if one was logged --
+        // its feed_kg/water_l mean "given", not "eaten/taken" like this
+        // evening record, so classifyRecord treats it separately.
+        supabaseAdmin
+          .from('daily_records')
+          .select('feed_kg, water_l')
+          .eq('flock_id', input.flockId)
+          .eq('period', 'morning')
+          .eq('record_date', today)
+          .maybeSingle(),
+      ]);
     if (flockErr || !flock) return res.status(404).json({ error: 'Flock not found' });
     if (priorErr) throw priorErr;
+    if (morningErr) throw morningErr;
 
     const priorRecords = (priorRows ?? []).map((r) => ({
       date: r.record_date,
@@ -34,10 +49,13 @@ router.post('/classify-and-save-record', requireFarmerAuth, async (req, res) => 
       mortality: r.mortality,
     }));
 
+    const morningRecord = morningRow ? { feedKg: Number(morningRow.feed_kg), waterL: Number(morningRow.water_l) } : null;
+
     const { flagged, reasons } = await classifyRecord({
       record: input,
       flock: { name: flock.name, type: flock.type, house: flock.house, birds: flock.birds },
       priorRecords,
+      morningRecord,
     });
 
     const { data, error } = await supabaseAdmin
@@ -45,6 +63,8 @@ router.post('/classify-and-save-record', requireFarmerAuth, async (req, res) => 
       .insert({
         flock_id: input.flockId,
         farm_id: req.farmId,
+        record_date: today,
+        period: 'evening',
         feed_kg: input.feedKg,
         water_l: input.waterL,
         mortality: input.mortality,

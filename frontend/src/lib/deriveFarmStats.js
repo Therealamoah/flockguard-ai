@@ -8,9 +8,13 @@ export function ageDaysFromHatch(hatchDate) {
   return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
 }
 
+// Evening-only: mortality, behavior, temperature/humidity, eggs, and weight
+// gain are only ever captured on the evening check-in (the morning check-in
+// just records feed/water given), so anything reading those fields needs
+// the latest evening row, not just the latest row of either period.
 export function latestRecordsFor(flockId, dailyRecords) {
   return dailyRecords
-    .filter((r) => r.flockId === flockId)
+    .filter((r) => r.flockId === flockId && r.period !== 'morning')
     .slice()
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 }
@@ -45,12 +49,22 @@ export function deriveFeedConsumption7d(dailyRecords) {
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
+    // Build the date key from local date fields (not toISOString, which
+    // reinterprets in UTC and can land on the wrong calendar day depending
+    // on timezone/time-of-day) so it lines up with the same local day used
+    // for the weekday label.
+    const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const day = d.toLocaleDateString('en-US', { weekday: 'short' });
+    days.push({ date, day });
   }
 
-  return days.map((date) => ({
-    day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-    kg: dailyRecords.filter((r) => r.date === date).reduce((sum, r) => sum + Number(r.feedKg || 0), 0),
+  // Evening-only -- this chart tracks actual consumption, not what was
+  // given this morning (that's a separate, deliberately larger number).
+  return days.map(({ date, day }) => ({
+    day,
+    kg: dailyRecords
+      .filter((r) => r.date === date && r.period !== 'morning')
+      .reduce((sum, r) => sum + Number(r.feedKg || 0), 0),
   }));
 }
 

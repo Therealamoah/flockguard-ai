@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bird, Plus, Lock } from 'lucide-react';
+import { Bird, Plus, Lock, Trash2 } from 'lucide-react';
 import PageHeader from '../components/PageHeader';
 import Card from '../components/Card';
 import Badge from '../components/Badge';
@@ -10,8 +10,9 @@ import { useFarmData } from '../context/farmDataStore';
 import { RISK_LABELS, RISK_TONES, STATUS_LABELS, STATUS_TONES } from '../lib/status';
 
 export default function Flocks() {
-  const { flocks, addFlock, currentPlan } = useFarmData();
+  const { flocks, addFlock, deleteFlock, currentPlan } = useFarmData();
   const [modalOpen, setModalOpen] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const atLimit = flocks.length >= currentPlan.flockLimit;
 
   async function handleSubmit(input) {
@@ -20,6 +21,20 @@ export default function Flocks() {
       setModalOpen(false);
     } catch (err) {
       alert(err.message);
+    }
+  }
+
+  async function handleDelete(flock) {
+    if (!window.confirm(`Delete "${flock.name}"? This permanently removes it and every daily record, alert, and recommendation logged under it.`)) {
+      return;
+    }
+    setDeletingId(flock.id);
+    try {
+      await deleteFlock(flock.id);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -75,7 +90,18 @@ export default function Flocks() {
                   </div>
                   <div className="text-sm text-ink-soft">{flock.house}</div>
                 </div>
-                <Badge tone={RISK_TONES[flock.risk]}>{RISK_LABELS[flock.risk]}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge tone={RISK_TONES[flock.risk]}>{RISK_LABELS[flock.risk]}</Badge>
+                  <button
+                    onClick={() => handleDelete(flock)}
+                    disabled={deletingId === flock.id}
+                    className="text-ink-muted hover:text-critical-ink disabled:opacity-50"
+                    aria-label={`Delete ${flock.name}`}
+                    title="Delete flock"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
 
               <dl className="grid grid-cols-2 gap-y-2 text-sm">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { MailCheck } from 'lucide-react';
 import FormField, { inputClass } from '../../components/FormField';
 import { useAuth } from '../../context/authStore';
 
@@ -14,6 +15,7 @@ export default function Register() {
     confirmPassword: '',
   });
   const [error, setError] = useState('');
+  const [confirmationRequired, setConfirmationRequired] = useState(false);
 
   function update(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -27,11 +29,33 @@ export default function Register() {
     }
     setError('');
     try {
-      await register(form);
-      navigate('/app', { replace: true });
+      const result = await register(form);
+      if (result?.confirmationRequired) {
+        setConfirmationRequired(true);
+      } else {
+        navigate('/app', { replace: true });
+      }
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  if (confirmationRequired) {
+    return (
+      <div className="text-center">
+        <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-mint-100 text-brand-500">
+          <MailCheck size={20} />
+        </span>
+        <h1 className="mt-4 text-lg font-semibold text-ink">Check your email</h1>
+        <p className="mt-1 text-sm text-ink-soft">
+          We sent a confirmation link to <span className="font-medium text-ink">{form.email}</span>. Confirm your
+          address to finish setting up your account.
+        </p>
+        <Link to="/login" className="mt-6 inline-block text-sm font-medium text-brand-500 hover:underline">
+          Back to log in
+        </Link>
+      </div>
+    );
   }
 
   return (

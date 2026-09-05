@@ -7,6 +7,7 @@ import uploadsRouter from './routes/uploads.js';
 import teamRouter from './routes/team.js';
 import notificationsRouter from './routes/notifications.js';
 import aiRouter from './routes/ai.js';
+import flocksRouter from './routes/flocks.js';
 import { requireAdminAuth } from './middleware/requireAdminAuth.js';
 import { startScheduler } from './lib/scheduler.js';
 
@@ -23,6 +24,7 @@ app.use('/api/uploads', uploadsRouter);
 app.use('/api/team', teamRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/flocks', flocksRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);

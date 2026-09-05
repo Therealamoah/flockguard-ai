@@ -12,7 +12,7 @@ alerts with a recommended next step.
 - [`frontend/`](frontend/) — React + Vite. Public site, the farmer-facing app
   (`/app/*`), and the platform admin panel (`/admin/*`).
 - [`backend/`](backend/) — Node/Express API. Anything that needs a secret key
-  (Supabase `service_role`, Paystack, Cloudinary, Gmail SMTP, Gemini) lives here —
+  (Supabase `service_role`, Paystack, Cloudinary, Gmail SMTP, OpenRouter) lives here —
   never in frontend code.
 - **Supabase** — Postgres database + Auth. The frontend talks to it directly for
   everything scoped to "my own farm" (protected by Row Level Security); the backend
@@ -83,31 +83,27 @@ browser never gets it).
 
 ## AI integration — current status
 
-**Using Google Gemini (`gemini-3.6-flash`) right now — this is a temporary
-choice, not the final one.** Our tutors are providing an xAI Grok API key later;
-Gemini has a genuinely free tier and was the fastest way to get a *real,
-working* AI loop in place while waiting for that.
+**Routed through OpenRouter (`OPENROUTER_MODEL`, defaults to
+`google/gemini-2.5-flash`) — not called directly against a single provider's
+SDK.** OpenRouter proxies Google, xAI, Anthropic, OpenAI, and others behind one
+OpenAI-compatible request shape, so when our tutors' xAI Grok API key arrives
+(or if a model gets deprecated), swapping providers is just changing the
+`OPENROUTER_MODEL` env var (e.g. to an `x-ai/grok-*` slug) and pointing
+`OPENROUTER_API_KEY` at the right account — no code changes.
 
 - Code lives in `backend/src/lib/ai.js` (two functions: `classifyRecord` and
-  `generateRecommendation`) and `backend/src/routes/ai.js`.
-- Verified working end-to-end: correctly flags genuinely bad records with
-  specific numeric reasons, correctly leaves normal records alone, and
-  generates real, usable recommendations.
-- **Two real setup issues hit along the way, in case they come up again:**
-  1. The first two API keys generated weren't valid Gemini credentials (wrong
-     token type — started with `AQ.` instead of the expected `AIzaSy...`).
-     Fix: the key **must** come from `aistudio.google.com` → "Get API key" →
-     "Create API key" specifically, not Google Cloud Console.
-  2. The model name `gemini-2.5-flash` is deprecated for new API keys; Google's
-     own error pointed us to `gemini-3.6-flash`, which is what's in use now.
-     If Google deprecates that too, the fix is the same: read the actual error
-     message, it names the replacement model directly.
-- **Swapping to Grok when the school key arrives** will need real code changes,
-  not just an env var swap — Grok's API uses a different (OpenAI-compatible)
-  request shape than Gemini's SDK. The swap is contained to `backend/src/lib/ai.js`
-  though; nothing in the frontend or the rest of the backend needs to change,
-  since everything downstream only ever consumes the same `{ flagged, reasons }`
-  / `{ title, body, priority }` shapes regardless of which model produced them.
+  `generateRecommendation`, both going through a shared `callOpenRouter`
+  helper using `response_format: json_schema` for structured output) and
+  `backend/src/routes/ai.js`.
+- Get a key from `openrouter.ai` → Keys → Create key, put it in
+  `OPENROUTER_API_KEY` in `backend/.env`.
+- Previously ran directly on Google Gemini via `@google/genai` — that SDK and
+  dependency have been removed now that OpenRouter is the single integration
+  point.
+- Everything downstream (Verify, Alerts, the admin panel's confirmed/dismissed
+  stats) only ever consumes the same `{ flagged, reasons }` /
+  `{ title, body, priority }` shapes regardless of which model produced them,
+  so this swap was contained entirely to `backend/src/lib/ai.js`.
 
 ## Local setup
 

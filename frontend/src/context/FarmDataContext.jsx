@@ -31,6 +31,7 @@ function mapDailyRecordRow(row) {
   return {
     id: row.id,
     date: row.record_date,
+    period: row.period,
     flockId: row.flock_id,
     feedKg: Number(row.feed_kg),
     waterL: Number(row.water_l),
@@ -177,10 +178,44 @@ export function FarmDataProvider({ children }) {
   const healthMetrics = useMemo(() => deriveHealthMetrics(flocksDisplay, dailyRecords), [flocksDisplay, dailyRecords]);
 
   async function addDailyRecord(input) {
-    // Pro/Enterprise: real AI classification, run server-side (the Gemini
-    // key can't live in the browser) and saved in the same request.
+    const today = new Date().toISOString().slice(0, 10);
+
+    // Morning check-in: just recording what was given, not a health signal
+    // by itself -- no AI call, no rule-based check, same on every plan.
+    if (input.period === 'morning') {
+      const { data, error } = await supabase
+        .from('daily_records')
+        .insert({
+          flock_id: input.flockId,
+          farm_id: farmId,
+          record_date: today,
+          period: 'morning',
+          feed_kg: input.feedKg,
+          water_l: input.waterL,
+          mortality: 0,
+          behavior: 'normal',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const record = mapDailyRecordRow(data);
+      setDailyRecords((prev) => [record, ...prev]);
+      return record;
+    }
+
+    // Evening check-in -- this is what actually gets classified. If this
+    // flock has a morning check-in for today, the classifier compares what
+    // was given then against what was eaten/taken now.
+    const morningRow = dailyRecords.find((r) => r.flockId === input.flockId && r.date === today && r.period === 'morning');
+    const morningRecord = morningRow ? { feedKg: morningRow.feedKg, waterL: morningRow.waterL } : null;
+
+    // Pro/Enterprise: real AI classification, run server-side (the API key
+    // can't live in the browser) and saved in the same request -- the
+    // backend looks up today's morning row itself.
     if (currentPlan.capabilities.fullDetection) {
-      const row = await backendApi.post('/api/ai/classify-and-save-record', input);
+      const row = await backendApi.post('/api/ai/classify-and-save-record', { ...input, period: 'evening' });
       const record = mapDailyRecordRow(row);
       setDailyRecords((prev) => [record, ...prev]);
       return record;
@@ -188,14 +223,16 @@ export function FarmDataProvider({ children }) {
 
     // Free: the cheap client-side mortality-only check, no AI call.
     const flock = flocksById[input.flockId];
-    const priorRecords = dailyRecords.filter((r) => r.flockId === input.flockId);
-    const { flagged, reasons } = detectAnomaly({ record: input, flock, priorRecords, fullDetection: false });
+    const priorRecords = dailyRecords.filter((r) => r.flockId === input.flockId && r.period === 'evening');
+    const { flagged, reasons } = detectAnomaly({ record: input, flock, priorRecords, morningRecord, fullDetection: false });
 
     const { data, error } = await supabase
       .from('daily_records')
       .insert({
         flock_id: input.flockId,
         farm_id: farmId,
+        record_date: today,
+        period: 'evening',
         feed_kg: input.feedKg,
         water_l: input.waterL,
         mortality: input.mortality,
@@ -247,6 +284,12 @@ export function FarmDataProvider({ children }) {
       if (alertError) throw alertError;
       setAlerts((prev) => [mapAlertRow(data), ...prev]);
 
+      // A confirmed alert means this flock now has a real, open issue --
+      // reflect that in its risk level so Dashboard/Flocks/Health Monitoring
+      // stop showing it as healthy.
+      await supabase.from('flocks').update({ risk: 'high' }).eq('id', record.flockId);
+      setFlocks((prev) => prev.map((f) => (f.id === record.flockId ? { ...f, risk: 'high' } : f)));
+
       // Best-effort -- the alert already exists, a logging hiccup here
       // shouldn't undo that.
       const flockName = data.flocks ? `${data.flocks.name} — ${data.flocks.house}` : '';
@@ -297,6 +340,18 @@ export function FarmDataProvider({ children }) {
     return flock;
   }
 
+  // Runs server-side (service_role key) -- farmers only have SELECT/INSERT
+  // rights on alerts/recommendations via RLS, not DELETE, so this can't be
+  // a direct Supabase call the way addFlock is.
+  async function deleteFlock(flockId) {
+    await backendApi.del(`/api/flocks/${flockId}`);
+
+    setFlocks((prev) => prev.filter((f) => f.id !== flockId));
+    setDailyRecords((prev) => prev.filter((r) => r.flockId !== flockId));
+    setAlerts((prev) => prev.filter((a) => a.flockId !== flockId));
+    setRecommendations((prev) => prev.filter((r) => r.flockId !== flockId));
+  }
+
   const pendingVerification = dailyRecords.filter((r) => r.flagged && r.verified === 'pending');
 
   const value = {
@@ -317,6 +372,7 @@ export function FarmDataProvider({ children }) {
     healthMetrics,
     loading,
     addFlock,
+    deleteFlock,
     addDailyRecord,
     verifyRecord,
   };

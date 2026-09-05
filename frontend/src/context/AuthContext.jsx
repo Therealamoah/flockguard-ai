@@ -77,10 +77,11 @@ export function AuthProvider({ children }) {
       },
     });
     if (error) throw error;
-    if (!data.session) return; // email confirmation is on — no session yet, don't claim logged-in
+    if (!data.session) return { confirmationRequired: true }; // email confirmation is on — no session yet, don't claim logged-in
 
     setUser(await loadUser(data.user));
     setIsAuthenticated(true);
+    return { confirmationRequired: false };
   }
 
   async function logout() {

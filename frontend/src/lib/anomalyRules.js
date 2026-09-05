@@ -5,6 +5,7 @@
 
 const MORTALITY_RATE_THRESHOLD = 0.3; // % of flock in a single day
 const FEED_DROP_THRESHOLD = 8; // % below the flock's recent average
+const UNEATEN_THRESHOLD = 20; // % of the morning's given feed/water left unconsumed by evening
 const TEMP_RANGE = [24, 31]; // °C
 const HUMIDITY_RANGE = [50, 72]; // %
 
@@ -15,9 +16,15 @@ function average(values) {
 
 // fullDetection gates everything except the mortality check -- Free plan
 // still catches the single most safety-critical signal, but the broader
-// pattern detection (feed trend, house conditions, behavior) is a paid
-// feature, matching what the pricing page actually promises.
-export function detectAnomaly({ record, flock, priorRecords = [], fullDetection = true }) {
+// pattern detection (feed trend, house conditions, behavior, and the
+// morning-vs-evening consumption gap) is a paid feature, matching what the
+// pricing page actually promises.
+//
+// morningRecord is this same flock's morning check-in for today, if one was
+// logged (feedKg/waterL there mean "given", not "eaten/taken" -- see
+// LogRecordModal) -- comparing it against tonight's evening reading catches
+// a flock going off feed/water before it shows up as anything else.
+export function detectAnomaly({ record, flock, priorRecords = [], morningRecord = null, fullDetection = true }) {
   const reasons = [];
 
   if (flock?.birds) {
@@ -29,6 +36,16 @@ export function detectAnomaly({ record, flock, priorRecords = [], fullDetection 
 
   if (!fullDetection) {
     return { flagged: reasons.length > 0, reasons };
+  }
+
+  if (morningRecord?.feedKg > 0 && record.feedKg < morningRecord.feedKg * (1 - UNEATEN_THRESHOLD / 100)) {
+    const uneaten = Math.round((1 - record.feedKg / morningRecord.feedKg) * 100);
+    reasons.push(`Only ${100 - uneaten}% of the ${morningRecord.feedKg}kg feed given this morning was eaten by evening`);
+  }
+
+  if (morningRecord?.waterL > 0 && record.waterL < morningRecord.waterL * (1 - UNEATEN_THRESHOLD / 100)) {
+    const untaken = Math.round((1 - record.waterL / morningRecord.waterL) * 100);
+    reasons.push(`Only ${100 - untaken}% of the ${morningRecord.waterL}L water given this morning was taken by evening`);
   }
 
   const recentFeed = average(priorRecords.slice(0, 5).map((r) => r.feedKg));

@@ -80,6 +80,9 @@ export default function DailyRecords() {
                     <span className="font-medium text-ink">
                       {flock.name} — {flock.type}
                     </span>
+                    <Badge tone={record.period === 'morning' ? 'neutral' : 'good'}>
+                      {record.period === 'morning' ? 'Morning' : 'Evening'}
+                    </Badge>
                     {record.flagged && (
                       <Badge tone={VERIFY_TONES[record.verified]}>{VERIFY_LABELS[record.verified]}</Badge>
                     )}
@@ -97,20 +100,26 @@ export default function DailyRecords() {
               </div>
 
               <div className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
-                <Metric label="Feed" value={`${record.feedKg.toLocaleString()} kg`} />
-                <Metric label="Water" value={`${record.waterL.toLocaleString()} L`} />
-                <Metric label="Mortality" value={record.mortality} />
-                {flock.type === 'Layers' ? (
-                  <Metric label="Eggs" value={record.eggCount?.toLocaleString()} />
-                ) : (
-                  <Metric label="Weight gain" value={record.weightGainG ? `${record.weightGainG} g/bird` : null} />
+                <Metric label={record.period === 'morning' ? 'Feed given' : 'Feed eaten'} value={`${record.feedKg.toLocaleString()} kg`} />
+                <Metric label={record.period === 'morning' ? 'Water given' : 'Water taken'} value={`${record.waterL.toLocaleString()} L`} />
+                {record.period !== 'morning' && (
+                  <>
+                    <Metric label="Mortality" value={record.mortality} />
+                    {flock.type === 'Layers' ? (
+                      <Metric label="Eggs" value={record.eggCount?.toLocaleString()} />
+                    ) : (
+                      <Metric label="Weight gain" value={record.weightGainG ? `${record.weightGainG} g/bird` : null} />
+                    )}
+                    <Metric label="Temp" value={record.temperature != null ? `${record.temperature}°C` : null} />
+                    <Metric label="Humidity" value={record.humidity != null ? `${record.humidity}%` : null} />
+                  </>
                 )}
-                <Metric label="Temp" value={record.temperature != null ? `${record.temperature}°C` : null} />
-                <Metric label="Humidity" value={record.humidity != null ? `${record.humidity}%` : null} />
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-ink-soft">
-                <span className="rounded-full bg-surface px-2 py-1">{BEHAVIOR_LABELS[record.behavior]}</span>
+                {record.period !== 'morning' && (
+                  <span className="rounded-full bg-surface px-2 py-1">{BEHAVIOR_LABELS[record.behavior]}</span>
+                )}
                 {record.evidence && (
                   <a
                     href={record.evidence.url}

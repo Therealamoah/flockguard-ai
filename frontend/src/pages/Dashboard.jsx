@@ -8,13 +8,14 @@ import RiskDonut from '../components/RiskDonut';
 import { useFarmData } from '../context/farmDataStore';
 import { useAuth } from '../context/authStore';
 
-const today = new Date().toLocaleDateString('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-});
+const RISK_PRIORITY = { high: 0, medium: 1, low: 2 };
 
 export default function Dashboard() {
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
   const {
     flocks,
     totalBirds,
@@ -55,9 +56,12 @@ export default function Dashboard() {
               <p className="text-sm text-ink-soft">No flocks yet — add one to start tracking.</p>
             ) : (
               <div className="flex flex-col gap-3">
-                {flocks.slice(0, 2).map((flock) => (
-                  <FlockOverviewItem key={flock.id} flock={flock} />
-                ))}
+                {[...flocks]
+                  .sort((a, b) => (RISK_PRIORITY[a.risk] ?? 2) - (RISK_PRIORITY[b.risk] ?? 2))
+                  .slice(0, 2)
+                  .map((flock) => (
+                    <FlockOverviewItem key={flock.id} flock={flock} />
+                  ))}
               </div>
             )}
           </div>

@@ -23,6 +23,7 @@ async function request(path, options = {}, headers = {}) {
 export const backendApi = {
   get: async (path) => request(path, {}, await authHeader()),
   post: async (path, body) => request(path, { method: 'POST', body: JSON.stringify(body) }, await authHeader()),
+  del: async (path) => request(path, { method: 'DELETE' }, await authHeader()),
 };
 
 // For routes reached before the caller has a session -- accepting a team
